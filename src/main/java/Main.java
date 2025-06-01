@@ -1,14 +1,13 @@
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Scanner;
+import java.util.stream.Stream;
 import java.util.zip.DataFormatException;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
@@ -83,9 +82,9 @@ public class Main {
           String dir = ".git/objects/"+hexString.substring(0,2);
           String filePath = dir + "/" + hexString.substring(2);
           new File(dir).mkdirs();
-          try (FileOutputStream fos = new FileOutputStream(filePath);
-              DeflaterOutputStream dos = new DeflaterOutputStream(fos)) {
-              dos.write(fullContent);  // Store the correct content
+          try (FileOutputStream fos = new FileOutputStream(filePath); //FileOutputStream allows writing byte data to a file, creating a new file if it doesn't exist or overwriting an existing one.
+              DeflaterOutputStream dos = new DeflaterOutputStream(fos)) { //compresses data using the DEFLATE algorithm (used in ZIP files, for example). Any data written to dos will be compressed before being passed to the file output stream.
+              dos.write(fullContent);
           }
         }
         catch (IOException e) {
@@ -95,6 +94,44 @@ public class Main {
         catch(NoSuchAlgorithmException e){
           throw new RuntimeException(e);
         } 
+      }
+
+      case "ls-tree" -> {
+          final String objectHash = args[2];
+          final String objectFolder = objectHash.substring(0, 2);
+          final String objectFilename = objectHash.substring(2);
+          final File treeObject = new File(".git/objects/" + objectFolder + "/" + objectFilename);
+          try {
+              byte[] data = Files.readAllBytes(treeObject.toPath());
+              Inflater inflater = new Inflater();
+              inflater.setInput(data);
+
+              try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length)) {
+                  byte[] buffer = new byte[1024];
+                  while (!inflater.finished()) {
+                      int count = inflater.inflate(buffer); // decompress data into buffer and returns length
+                      outputStream.write(buffer, 0, count);
+                  }
+                  String decompressedString = outputStream.toString("UTF-8");
+                  String[] arr = decompressedString.split("\0");
+                  for(int i=1;i<arr.length;i++){
+                    String[] permissionsAndName = arr[i].split(" ");
+                    if(permissionsAndName.length < 2){break;}
+                    System.out.println(permissionsAndName[1]);
+                  }
+              } catch (DataFormatException e) {
+                  throw new RuntimeException(e);
+              }
+          
+            // try (Stream<Path> stream = Files.list(path)) {
+            //     stream.filter(Files::isDirectory)
+            //           .forEach(dir -> System.out.println(dir.getFileName()));
+            // } catch (IOException e) {
+            //     e.printStackTrace();
+            // }
+          }catch (IOException e) {
+              throw new RuntimeException(e);
+          }
       }
       default -> System.out.println("Unknown command: " + command);
     }
