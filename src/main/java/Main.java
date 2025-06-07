@@ -146,6 +146,33 @@ public class Main {
           throw new RuntimeException(e);
         }
       }
+      case "commit-tree" -> {
+        String treeSha = args[1];
+        String parentSHA = args[3];
+        String message = args[5];
+        String content = "tree " + treeSha + "\n"
+                          + "parent " + parentSHA + "\n"
+                          + "author " + "mahesh"
+                          + "abc@gmail.com" + "\n" + "\n"
+                          + message + "\n";
+        String commitObject = "commit " + content.length() + "\0" + content;
+        String hexString = computeSHA1(commitObject.getBytes());
+        System.out.print(hexString); 
+        String dir = ".git/objects/"+hexString.substring(0,2);
+        File parentDir = new File(dir);
+        if(!parentDir.exists()){
+          parentDir.mkdirs();
+        }
+        String filePath = dir + "/" + hexString.substring(2);
+        try (FileOutputStream fos = new FileOutputStream(filePath); //FileOutputStream allows writing byte data to a file, creating a new file if it doesn't exist or overwriting an existing one.
+            DeflaterOutputStream dos = new DeflaterOutputStream(fos)) { //compresses data using the DEFLATE algorithm (used in ZIP files, for example). Any data written to dos will be compressed before being passed to the file output stream.
+            dos.write(commitObject.getBytes());
+        }
+        catch (IOException e) {
+          //System.out.println("An error occurred.");
+          e.printStackTrace();
+        }
+      }
       default -> System.out.println("Unknown command: " + command);
     }
   }
