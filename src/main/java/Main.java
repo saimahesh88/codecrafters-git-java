@@ -15,6 +15,9 @@ import java.util.zip.DataFormatException;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
 
+import javax.management.RuntimeErrorException;
+
+import org.eclipse.jgit.api.Git;
 public class Main {
   public static void main(String[] args){
     // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -171,6 +174,17 @@ public class Main {
         catch (IOException e) {
           //System.out.println("An error occurred.");
           e.printStackTrace();
+        }
+      }
+      case "clone" -> {
+        String repoURL = args[1];
+        String dirName = args[2];
+        File repoDir = new File(dirName);
+        try{
+          Git.cloneRepository().setURI(repoURL).setDirectory(repoDir).call();
+        }
+        catch (Exception e){
+          throw (new RuntimeException(e)); 
         }
       }
       default -> System.out.println("Unknown command: " + command);
